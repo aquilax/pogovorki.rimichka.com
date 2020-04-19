@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Познай поговорката" />
+  <meta name="keywords" content="игра, поговорки, думи" />
+  <title>Познай поговорката</title>
+  <style>
+    body { font-size: 1.4em; }
+    header { border-bottom: 1px solid #000; }
+    .container {max-width: 640px; text-align: center; margin: 0 auto;}
+    fieldset {border: 0; padding: 0; }
+    input { width: 80%; padding: .6em; }
+    button { padding: .6em; }
+    section { margin-bottom: 1em }
+    .rules { border : 2px dashed #ceccec;}
+  </style>
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-59829770-29"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-59829770-29');
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Познай поговорката</h1>
+    </header>
+    <section class="game">
+      <h2 id="proverb"></h2>
+      <p id="feedback">Зареждане...</p>
+      <form id="form">
+        <fieldset id="fieldset" disabled>
+          <input id="guess" autofocus/>
+          <button type="submit">Oпитай</button>
+        </fieldset>
+      </form>
+      <hr />
+      <button id="new" type="button">Нова игра</button>
+    </section>
+    <section class="rules">
+      <h3>Правила</h3>
+      <p>Трябва да познаеш българска поговорка. Всички гласни са премахнати а съгласните са разбъркани.</p>
+    </section>
+    <footer>
+      <p>Цитати от <a href="https://bg.wikiquote.org/">Уикицитат</a>.</p>
+    </footer>
+  </div>
+<script>
+(() => {
+  const IDLE = 0;
+  const LOADING = 1;
+  const GAME = 2;
+  const WIN = 3;
+
+  const proverbNode = document.getElementById('proverb');
+  const formNode = document.getElementById('form');
+  const guessNode = document.getElementById('guess');
+  const feedback = document.getElementById('feedback');
+  const fieldset = document.getElementById('fieldset');
+  const newGame = document.getElementById('new');
+
+  let state = {};
+
+  const setState = (newState) => { state = {...state, ...newState}}
+
+  const shuffle = s => {
+    const t = s.split('')
+    for (let i = t.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [t[i], t[j]] = [t[j], t[i]];
+    }
+    return t.join('')
+  }
+
+  const clearPunctuation = s => s.replace(/(\.|,|!|-)/g,'')
+
+  const scramble = s => s.toUpperCase().split('').filter(c => !'АЪОУЕИЮЯ'.split('').includes(c)).join('').split(' ').map(shuffle).join(' ')
+
+  const getProverb = () => fetch('https://api.bazadanni.com/api/quote/random').then(data => data.json());
+
+  formNode.addEventListener('submit', e => {
+    e.preventDefault();
+    if (clearPunctuation(guessNode.value).toUpperCase() === state.proverb.toUpperCase()) {
+      setState({
+        state: WIN,
+        proverb: '',
+        scrambled: ''
+      });
+      proverbNode.innerHTML = state.proverb;
+      feedback.innerHTML = 'Позна!'
+      fieldset.disabled = true;
+    } else {
+      feedback.innerHTML = 'Опитай отново';
+      guessNode.value = '';
+      guessNode.focus();
+    }
+  })
+
+  newGame.addEventListener('click', e => {
+    e.preventDefault();
+    reset();
+  })
+
+  const reset = () => getProverb().then((data) => {
+      const proverb = clearPunctuation(data.data.quote);
+      setState({
+        proverb: proverb,
+        scrambled: scramble(proverb),
+        state: GAME,
+      });
+      proverbNode.innerHTML = state.scrambled;
+      fieldset.disabled = false;
+      feedback.innerHTML = 'Познай поговорката';
+      guessNode.focus();
+    });
+
+  function run() {
+    reset()
+  }
+  run();
+})();
+  </script>
+</body>
+</html>
